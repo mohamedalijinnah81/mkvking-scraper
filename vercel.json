@@ -1,0 +1,16 @@
+{
+    "version": 2,
+    "builds": [
+      { "src": "api/movies.py", "use": "@vercel/python" }
+    ],
+    "routes": [
+      { "src": "/api/movies", "dest": "api/movies.py" }
+    ],
+    "crons": [
+      {
+        "path": "/api/run-cron",
+        "schedule": "0 0 * * *"
+      }
+    ]
+  }
+  
