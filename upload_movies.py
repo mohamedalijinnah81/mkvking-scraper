@@ -1,10 +1,10 @@
 import os
 import json
 import requests
+import asyncio
+from vercel_blob import put  # ✅ Import the SDK
 
-VERCEL_BLOB_URL = "https://blob.vercel-storage.com/upload"
-API_MOVIES_URL = "https://mkvking-scraper.vercel.app/api/movies"  # <-- update this
-BLOB_READ_WRITE_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")  # from .env.local
+API_MOVIES_URL = "https://mkvking-scraper.vercel.app/api/movies"  # <-- update if needed
 
 def fetch_movies():
     """ Fetch movies from the deployed /api/movies endpoint """
@@ -15,24 +15,16 @@ def fetch_movies():
         print(f"Failed to fetch movies: {response.status_code}")
         return None
 
-def upload_to_vercel_blob(file_path):
-    """ Upload a local file to Vercel Blob """
-    headers = {
-        "Authorization": f"Bearer {BLOB_READ_WRITE_TOKEN}"
-    }
-    files = {
-        "file": open(file_path, "rb")
-    }
-    response = requests.post(VERCEL_BLOB_URL, headers=headers, files=files)
+async def upload_to_vercel_blob(file_path):
+    """ Upload a local file to Vercel Blob using Vercel Blob SDK """
+    with open(file_path, "rb") as f:
+        data = f.read()
 
-    if response.status_code == 200:
-        print("Successfully uploaded to Vercel Blob")
-        print(response.json())
-    else:
-        print(f"Failed to upload to Vercel Blob: {response.status_code}")
-        print(response.text)
+    blob = await put("movies.json", data)  # <-- Just this! No manual Authorization header needed
+    print("Successfully uploaded to Vercel Blob")
+    print(blob)
 
-def main():
+async def main():
     movies_data = fetch_movies()
     if not movies_data:
         return
@@ -42,7 +34,7 @@ def main():
         json.dump(movies_data, f, ensure_ascii=False, indent=4)
 
     # Upload to Vercel Blob
-    upload_to_vercel_blob("movies.json")
+    await upload_to_vercel_blob("movies.json")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
