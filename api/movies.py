@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
 import requests
 import sys
 from bs4 import BeautifulSoup
@@ -128,68 +128,81 @@ def fetch_movie_details(movie_url):
 
     return movie_data
 
-def scrape_movies_upto_10_pages():
-    """ Scrape movies directly from homepage up to 10 pages. """
+def scrape_movies_from_page(page_number):
+    """ Scrape movies from a specific page number. """
     base_url = "https://a.mkvking.homes/"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
 
-    all_movies = []
-    movie_id = 1
+    if page_number == 1:
+        page_url = base_url
+    else:
+        page_url = f"{base_url}page/{page_number}/"
 
-    for page in range(1, 4):  # Pages 1 to 1281
-        if page == 1:
-            page_url = base_url
-        else:
-            page_url = f"{base_url}page/{page}/"
+    print(f"Scraping Page {page_number} - URL: {page_url}")
+    sys.stdout.flush()
 
-        print(f"Scraping Page {page} - URL: {page_url}")
-        sys.stdout.flush()  # Flush to make sure Vercel shows log immediately
-
-        response = requests.get(page_url, headers=headers)
-        if response.status_code != 200:
-            print(f"Failed to fetch Page {page}: Status {response.status_code}")
-            sys.stdout.flush()
-            continue
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        main_load_div = soup.find("div", id="gmr-main-load")
-        if not main_load_div:
-            print(f"No movie container found on Page {page}")
-            sys.stdout.flush()
-            continue
-
-        articles = main_load_div.find_all("article")
-
-        for article in articles:
-            content_thumbnail = article.find("div", class_="content-thumbnail")
-            url = None
-
-            if content_thumbnail:
-                a_tag = content_thumbnail.find("a")
-                if a_tag:
-                    url = a_tag.get("href")
-
-            if url:
-                movie_details = fetch_movie_details(url)
-                if movie_details:
-                    movie_details["id"] = movie_id
-                    all_movies.append(movie_details)
-                    print(f"Fetched Movie {movie_id}: {movie_details['name']}")
-                    sys.stdout.flush()
-                    movie_id += 1
-
-        print(f"Completed scraping Page {page}, Total movies collected: {len(all_movies)}")
+    response = requests.get(page_url, headers=headers)
+    if response.status_code != 200:
+        print(f"Failed to fetch Page {page_number}: Status {response.status_code}")
         sys.stdout.flush()
+        return []
 
-    return all_movies
+    soup = BeautifulSoup(response.text, "html.parser")
 
-@app.route('/api/movies', methods=['GET'])
-def get_all_movies():
-    """ API endpoint to fetch all movies from homepage up to 10 pages. """
-    movies = scrape_movies_upto_10_pages()
+    main_load_div = soup.find("div", id="gmr-main-load")
+    if not main_load_div:
+        print(f"No movie container found on Page {page_number}")
+        sys.stdout.flush()
+        return []
+
+    articles = main_load_div.find_all("article")
+
+    movies = []
+    movie_id = 1  # You can assign a temporary ID per page
+
+    for article in articles:
+        content_thumbnail = article.find("div", class_="content-thumbnail")
+        url = None
+
+        if content_thumbnail:
+            a_tag = content_thumbnail.find("a")
+            if a_tag:
+                url = a_tag.get("href")
+
+        if url:
+            movie_details = fetch_movie_details(url)
+            if movie_details:
+                movie_details["id"] = movie_id
+                movies.append(movie_details)
+                print(f"Fetched Movie {movie_id}: {movie_details['name']}")
+                sys.stdout.flush()
+                movie_id += 1
+
+    print(f"Completed scraping Page {page_number}, Total movies collected: {len(movies)}")
+    sys.stdout.flush()
+
+    return movies
+
+@app.route('/api/movies', methods=['POST'])
+def get_movies_from_page():
+    """ API endpoint to fetch movies from a specific page number. """
+    data = request.get_json()
+
+    if not data or 'page' not in data:
+        return jsonify({"error": "Missing 'page' parameter in request body"}), 400
+
+    try:
+        page = int(data['page'])
+    except ValueError:
+        return jsonify({"error": "'page' must be an integer"}), 400
+
+    if page < 1:
+        return jsonify({"error": "Page number must be greater than or equal to 1"}), 400
+
+    movies = scrape_movies_from_page(page)
     return jsonify({
+        "page": page,
         "movies": movies
     })
