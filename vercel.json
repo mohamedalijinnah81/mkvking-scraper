@@ -10,6 +10,10 @@
       {
         "path": "/api/run-cron",
         "schedule": "0 0 * * *"
+      },
+      {
+        "path": "/upload-movies",
+        "schedule": "0 3 * * *"
       }
     ]
   }
