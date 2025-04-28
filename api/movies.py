@@ -163,7 +163,7 @@ def scrape_movies_from_page(page_number):
     movie_id = 1  # You can assign a temporary ID per page
 
     for article in articles:
-        content_thumbnail = article.find("div", class_="content-thumbnail")
+        content_thumbnail = article.find("h2", class_="entry-title")
         url = None
 
         if content_thumbnail:
