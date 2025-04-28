@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 import requests
-import sys
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
@@ -138,27 +137,20 @@ def scrape_movies_upto_10_pages():
     all_movies = []
     movie_id = 1
 
-    for page in range(1, 4):  # Pages 1 to 1281
+    for page in range(1, 1282):  # Pages 1 to 5
         if page == 1:
             page_url = base_url
         else:
             page_url = f"{base_url}page/{page}/"
 
-        print(f"Scraping Page {page} - URL: {page_url}")
-        sys.stdout.flush()  # Flush to make sure Vercel shows log immediately
-
         response = requests.get(page_url, headers=headers)
         if response.status_code != 200:
-            print(f"Failed to fetch Page {page}: Status {response.status_code}")
-            sys.stdout.flush()
             continue
 
         soup = BeautifulSoup(response.text, "html.parser")
 
         main_load_div = soup.find("div", id="gmr-main-load")
         if not main_load_div:
-            print(f"No movie container found on Page {page}")
-            sys.stdout.flush()
             continue
 
         articles = main_load_div.find_all("article")
@@ -177,12 +169,8 @@ def scrape_movies_upto_10_pages():
                 if movie_details:
                     movie_details["id"] = movie_id
                     all_movies.append(movie_details)
-                    print(f"Fetched Movie {movie_id}: {movie_details['name']}")
-                    sys.stdout.flush()
                     movie_id += 1
-
-        print(f"Completed scraping Page {page}, Total movies collected: {len(all_movies)}")
-        sys.stdout.flush()
+        print("Page ", page, " completed")
 
     return all_movies
 
