@@ -12,7 +12,7 @@
         "schedule": "0 0 * * *"
       },
       {
-        "path": "/api/scrape",
+        "path": "/api/cron",
         "schedule": "0 17 * * *"
       }
     ]
