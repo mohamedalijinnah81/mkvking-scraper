@@ -5,6 +5,46 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
+TMDB_BEARER_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2YjljMGQ1ZTJhYTk0OTVjZTQzZmY4MzQyNTNjYmRjOCIsIm5iZiI6MS43NDYzNDIyMDIyNTQwMDAyZSs5LCJzdWIiOiI2ODE3MTEzYWVlOGFlODcwZWQ4NGNmZDEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.6rfRRKkn7eqsUv1VwIifWCehwT3f-YwK-6KV7x1kfx8'
+
+def fetch_tmdb_images(name, year=None):
+    try:
+        base_url = "https://api.themoviedb.org/3/search/movie"
+        headers = {
+            "Authorization": f"Bearer {TMDB_BEARER_TOKEN}",
+            "accept": "application/json"
+        }
+
+        def get_results(params):
+            response = requests.get(base_url, headers=headers, params=params)
+            if response.status_code == 200:
+                return response.json().get("results", [])
+            return []
+
+        # Try with year
+        params = {"query": name}
+        if year:
+            params["primary_release_year"] = year
+        results = get_results(params)
+
+        # Retry without year
+        if not results and year:
+            results = get_results({"query": name})
+
+        if results:
+            movie = results[0]
+            poster_path = movie.get("poster_path")
+            backdrop_path = movie.get("backdrop_path")
+            return {
+                "tmdb_poster": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
+                "tmdb_backdrop": f"https://image.tmdb.org/t/p/w1280{backdrop_path}" if backdrop_path else None,
+            }
+
+    except Exception as e:
+        print(f"Error fetching TMDB images for '{name} ({year})': {e}")
+
+    return {"tmdb_poster": None, "tmdb_backdrop": None}
+
 def fetch_movie_details(movie_url):
     """ Fetch full movie details from a movie's page. """
     headers = {
@@ -20,6 +60,7 @@ def fetch_movie_details(movie_url):
     movie_data = {
         "url": movie_url,
         "poster": None,
+        "backdrop_path": None,
         "poster_alt": None,
         "name": None,
         "genre": [],
@@ -126,6 +167,12 @@ def fetch_movie_details(movie_url):
                     "url": a_tag.get("href")
                 })
 
+    # Add TMDB poster and backdrop
+    if movie_data["name"]:
+        tmdb_images = fetch_tmdb_images(movie_data["name"], movie_data["year"])
+        movie_data["poster"] = tmdb_images["tmdb_poster"] if tmdb_images["tmdb_poster"] else movie_data["poster"]
+        movie_data["backdrop_path"] = tmdb_images["tmdb_backdrop"]
+
     return movie_data
 
 def scrape_movies_from_page(page_number):
@@ -206,3 +253,6 @@ def get_movies_from_page():
         "page": page,
         "movies": movies
     })
+
+if __name__ == '__main__':
+    app.run(debug=True)
