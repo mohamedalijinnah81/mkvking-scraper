@@ -1,11 +1,16 @@
 from flask import Flask, request, jsonify
 import requests
 import sys
+import re
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
 TMDB_BEARER_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2YjljMGQ1ZTJhYTk0OTVjZTQzZmY4MzQyNTNjYmRjOCIsIm5iZiI6MS43NDYzNDIyMDIyNTQwMDAyZSs5LCJzdWIiOiI2ODE3MTEzYWVlOGFlODcwZWQ4NGNmZDEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.6rfRRKkn7eqsUv1VwIifWCehwT3f-YwK-6KV7x1kfx8'
+
+def clean_movie_name(name):
+    # Remove a trailing year in parentheses OR without, only if it's at the end
+    return re.sub(r'\s*(\(\d{4}\)|\d{4})\s*$', '', name).strip()
 
 def fetch_tmdb_images(name, year=None):
     try:
@@ -42,6 +47,7 @@ def fetch_tmdb_images(name, year=None):
 
     except Exception as e:
         print(f"Error fetching TMDB images for '{name} ({year})': {e}")
+        sys.stdout.flush()
 
     return {"tmdb_poster": None, "tmdb_backdrop": None}
 
@@ -169,7 +175,8 @@ def fetch_movie_details(movie_url):
 
     # Add TMDB poster and backdrop
     if movie_data["name"]:
-        tmdb_images = fetch_tmdb_images(movie_data["name"], movie_data["year"])
+        movie_name = clean_movie_name(movie_data["name"])
+        tmdb_images = fetch_tmdb_images(movie_name, movie_data["year"])
         movie_data["poster"] = tmdb_images["tmdb_poster"] if tmdb_images["tmdb_poster"] else movie_data["poster"]
         movie_data["backdrop_path"] = tmdb_images["tmdb_backdrop"]
 
@@ -253,6 +260,3 @@ def get_movies_from_page():
         "page": page,
         "movies": movies
     })
-
-if __name__ == '__main__':
-    app.run(debug=True)
