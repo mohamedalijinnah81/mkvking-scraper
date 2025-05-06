@@ -86,7 +86,9 @@ def fetch_movie_details(movie_url):
     if content_thumbnail:
         img_tag = content_thumbnail.find("img")
         if img_tag:
-            movie_data["poster"] = img_tag.get("src")
+            raw_src = img_tag.get("src")
+            clean_src = re.sub(r'-\d+x\d+(?=\.(jpg|jpeg|png))', '', raw_src)
+            movie_data["poster"] = clean_src
             movie_data["poster_alt"] = img_tag.get("alt")
 
     entry_title = soup.find("h1", class_="entry-title")
