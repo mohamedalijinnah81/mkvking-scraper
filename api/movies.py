@@ -3,10 +3,20 @@ import requests
 import sys
 import re
 from bs4 import BeautifulSoup
+import cloudinary
+import cloudinary.uploader
+from urllib.parse import urlparse
+import os
 
 app = Flask(__name__)
 
 TMDB_BEARER_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2YjljMGQ1ZTJhYTk0OTVjZTQzZmY4MzQyNTNjYmRjOCIsIm5iZiI6MS43NDYzNDIyMDIyNTQwMDAyZSs5LCJzdWIiOiI2ODE3MTEzYWVlOGFlODcwZWQ4NGNmZDEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.6rfRRKkn7eqsUv1VwIifWCehwT3f-YwK-6KV7x1kfx8'
+
+cloudinary.config(
+    cloud_name='dshmvyjgf',
+    api_key='832587935596469',
+    api_secret='5DPNHukMTr1agmI0nowrDTJuHRQ'
+)
 
 def clean_movie_name(name):
     # Remove a trailing year in parentheses OR without, only if it's at the end
@@ -50,6 +60,27 @@ def fetch_tmdb_images(name, year=None):
         sys.stdout.flush()
 
     return {"tmdb_poster": None, "tmdb_backdrop": None}
+
+# Upload mkvking poster images to blob
+def upload_to_cloudinary(image_url):
+    try:
+        # Extract filename from image_url
+        parsed_url = urlparse(image_url)
+        filename = os.path.basename(parsed_url.path)  # e.g., Avengers-Infinity-War-imax.jpg
+        name_without_ext = os.path.splitext(filename)[0]  # For public_id, exclude extension
+
+        public_id = f"cinebucket/posters/{name_without_ext}"
+
+        upload_result = cloudinary.uploader.upload(
+            image_url,
+            public_id=public_id,
+            overwrite=True,
+            resource_type="image"
+        )
+        return upload_result.get('secure_url')
+    except Exception as e:
+        print(f"Cloudinary upload failed for {image_url}: {e}")
+        return None
 
 def fetch_movie_details(movie_url):
     """ Fetch full movie details from a movie's page. """
@@ -179,7 +210,13 @@ def fetch_movie_details(movie_url):
     if movie_data["name"]:
         movie_name = clean_movie_name(movie_data["name"])
         tmdb_images = fetch_tmdb_images(movie_name, movie_data["year"])
-        movie_data["poster"] = tmdb_images["tmdb_poster"] if tmdb_images["tmdb_poster"] else movie_data["poster"]
+        if tmdb_images["tmdb_poster"]:
+            movie_data["poster"] = tmdb_images["tmdb_poster"]
+        else:
+            if movie_data["poster"] and "mkvking" in movie_data["poster"]:
+                cloudinary_url = upload_to_cloudinary(movie_data["poster"])
+                if cloudinary_url:
+                    movie_data["poster"] = cloudinary_url
         movie_data["backdrop_path"] = tmdb_images["tmdb_backdrop"]
 
     return movie_data
