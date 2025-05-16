@@ -80,6 +80,7 @@ def upload_to_cloudinary(image_url):
         return upload_result.get('secure_url')
     except Exception as e:
         print(f"Cloudinary upload failed for {image_url}: {e}")
+        sys.stdout.flush()
         return None
 
 def fetch_movie_details(movie_url):
