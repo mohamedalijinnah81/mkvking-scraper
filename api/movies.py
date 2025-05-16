@@ -71,7 +71,7 @@ def upload_to_cloudinary(image_url):
 
         upload_result = cloudinary.uploader.upload(
             image_url,
-            folder="cinebucket/posters"
+            folder="cinebucket/posters",
             public_id=name_without_ext,
             overwrite=True,
             resource_type="image"
