@@ -69,11 +69,10 @@ def upload_to_cloudinary(image_url):
         filename = os.path.basename(parsed_url.path)  # e.g., Avengers-Infinity-War-imax.jpg
         name_without_ext = os.path.splitext(filename)[0]  # For public_id, exclude extension
 
-        public_id = f"cinebucket/posters/{name_without_ext}"
-
         upload_result = cloudinary.uploader.upload(
             image_url,
-            public_id=public_id,
+            folder="cinebucket/posters"
+            public_id=name_without_ext,
             overwrite=True,
             resource_type="image"
         )
