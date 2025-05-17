@@ -78,7 +78,7 @@ def fetch_tmdb_images(name, year=None):
             poster_path = movie.get("poster_path")
             backdrop_path = movie.get("backdrop_path")
             return {
-                "tmdb_poster": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
+                "tmdb_poster": f"https://image.tmdb.org/t/p/w780{poster_path}" if poster_path else None,
                 "tmdb_backdrop": f"https://image.tmdb.org/t/p/w1280{backdrop_path}" if backdrop_path else None,
             }
 
